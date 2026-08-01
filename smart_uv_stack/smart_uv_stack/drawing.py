@@ -49,9 +49,13 @@ def clear_cache() -> None:
 
 
 def draw_text(text: str, x: float, y: float, size: int = 12) -> None:
-    blf.size(0, size, 72)
-    blf.position(0, x + 4.0, y + 4.0, 0.0)
-    blf.draw(0, text)
+    try:
+        font_id = 0
+        blf.size(font_id, size, 72)
+        blf.position(font_id, x + 4.0, y + 4.0, 0.0)
+        blf.draw(font_id, text)
+    except Exception:
+        return
 
 
 def draw_callback() -> None:
@@ -77,8 +81,15 @@ def draw_callback() -> None:
     if entry is None:
         return
 
-    v2d = region.view2d
-    shader = gpu.shader.from_builtin("2D_UNIFORM_COLOR")
+    v2d = getattr(region, "view2d", None)
+    if v2d is None:
+        return
+
+    try:
+        shader = gpu.shader.from_builtin("2D_UNIFORM_COLOR")
+    except Exception:
+        return
+
     gpu.state.blend_set("ALPHA")
 
     max_groups = settings.max_preview_groups
@@ -90,7 +101,15 @@ def draw_callback() -> None:
             face_color = (1.0, 0.82, 0.15, 0.95) if island_index == ref_idx else color
             if settings.show_preview_colors:
                 for face_record in island.face_records:
-                    coords = [v2d.view_to_region(v.x, v.y, clip=False) for v in face_record.uv_coords]
+                    coords = []
+                    for v in face_record.uv_coords:
+                        try:
+                            pt = v2d.view_to_region(v.x, v.y, clip=False)
+                        except Exception:
+                            pt = None
+                        if pt is None:
+                            continue
+                        coords.append((pt[0], pt[1]))
                     if len(coords) < 2:
                         continue
                     coords.append(coords[0])
@@ -99,20 +118,24 @@ def draw_callback() -> None:
                     shader.uniform_float("color", face_color)
                     batch.draw(shader)
 
-            if settings.show_group_ids and island.face_records:
-                centroid = Vector((
-                    sum(v.x for v in island.all_uvs) / max(1, len(island.all_uvs)),
-                    sum(v.y for v in island.all_uvs) / max(1, len(island.all_uvs)),
-                ))
-                x, y = v2d.view_to_region(centroid.x, centroid.y, clip=False)
-                draw_text(f"G{group_index + 1}", x, y, 11)
+            if settings.show_group_ids and island.all_uvs:
+                cx = sum(v.x for v in island.all_uvs) / max(1, len(island.all_uvs))
+                cy = sum(v.y for v in island.all_uvs) / max(1, len(island.all_uvs))
+                try:
+                    x, y = v2d.view_to_region(cx, cy, clip=False)
+                    draw_text(f"G{group_index + 1}", x, y, 11)
+                except Exception:
+                    continue
 
 
 def install_draw_handler() -> None:
     global _DRAW_HANDLER
     if _DRAW_HANDLER is not None:
         return
-    _DRAW_HANDLER = bpy.types.SpaceImageEditor.draw_handler_add(draw_callback, (), "WINDOW", "POST_PIXEL")
+    try:
+        _DRAW_HANDLER = bpy.types.SpaceImageEditor.draw_handler_add(draw_callback, (), "WINDOW", "POST_PIXEL")
+    except Exception:
+        _DRAW_HANDLER = None
 
 
 def remove_draw_handler() -> None:
@@ -121,5 +144,7 @@ def remove_draw_handler() -> None:
         return
     try:
         bpy.types.SpaceImageEditor.draw_handler_remove(_DRAW_HANDLER, "WINDOW")
+    except Exception:
+        pass
     finally:
         _DRAW_HANDLER = None
