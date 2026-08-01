@@ -5,7 +5,7 @@ from bpy.props import BoolProperty, FloatProperty, IntProperty, PointerProperty
 from bpy.types import PropertyGroup
 
 
-def _tag_redraw(context: bpy.types.Context | None) -> None:
+def _tag_redraw(self, context: bpy.types.Context | None) -> None:
     if context is None:
         return
     window = getattr(context, "window", None)
@@ -13,7 +13,10 @@ def _tag_redraw(context: bpy.types.Context | None) -> None:
         return
     for area in window.screen.areas:
         if area.type == "IMAGE_EDITOR":
-            area.tag_redraw()
+            try:
+                area.tag_redraw()
+            except Exception:
+                continue
 
 
 class SmartUVStackSettings(PropertyGroup):
