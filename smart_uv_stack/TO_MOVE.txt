@@ -1,0 +1,11 @@
+CHANGELOG.md
+README.md
+LICENSE
+
+smart_uv_stack/__init__.py
+smart_uv_stack/drawing.py
+smart_uv_stack/geometry.py
+smart_uv_stack/operators.py
+smart_uv_stack/properties.py
+smart_uv_stack/stacking.py
+smart_uv_stack/ui.py
