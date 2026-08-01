@@ -37,17 +37,37 @@ CLASSES = (
 
 def register() -> None:
     for cls in CLASSES:
-        bpy.utils.register_class(cls)
-    bpy.types.Scene.smart_uv_stack_settings = bpy.props.PointerProperty(type=SmartUVStackSettings)
-    install_draw_handler()
+        try:
+            bpy.utils.register_class(cls)
+        except RuntimeError:
+            try:
+                bpy.utils.unregister_class(cls)
+                bpy.utils.register_class(cls)
+            except Exception:
+                pass
+    if not hasattr(bpy.types.Scene, "smart_uv_stack_settings"):
+        bpy.types.Scene.smart_uv_stack_settings = bpy.props.PointerProperty(type=SmartUVStackSettings)
+    try:
+        install_draw_handler()
+    except Exception:
+        pass
 
 
 def unregister() -> None:
-    remove_draw_handler()
+    try:
+        remove_draw_handler()
+    except Exception:
+        pass
     if hasattr(bpy.types.Scene, "smart_uv_stack_settings"):
-        del bpy.types.Scene.smart_uv_stack_settings
+        try:
+            del bpy.types.Scene.smart_uv_stack_settings
+        except Exception:
+            pass
     for cls in reversed(CLASSES):
-        bpy.utils.unregister_class(cls)
+        try:
+            bpy.utils.unregister_class(cls)
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
